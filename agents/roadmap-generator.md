@@ -260,11 +260,21 @@ Only generate after **confirming all content has been read**.
    - Tag document name and page number
    - Briefly quote key original text
 
-4. **source_range annotation** (⚠️ Mandatory)
-   - Tag each knowledge point with `source_range: {filename}:{page_range}, {page_range}, ...`
-   - Page numbers based on actual pagination during reading; multiple page ranges separated by commas
-   - For multi-file: `source_range: A.pdf:12-15, B.md`
-   - Non-PDF files (`.md` / `.txt`): omit page numbers to indicate full text
+4. **source_range annotation** (⚠️ Mandatory — context-extractor.py requires this format)
+
+   **Exact format required by the parser:**
+   ```
+   **Knowledge Point Title**  `source_range: file.pdf:12-15, 45-48`
+   ```
+   
+   Rules:
+   - `source_range:` keyword is backtick-wrapped together with the value: `` `source_range: ...` ``
+   - On the SAME line as the bold title (preferred) OR on the very next line
+   - Page numbers from actual reading; multiple ranges separated by commas
+   - Multi-file: `` `source_range: A.pdf:12-15, B.md` ``
+   - Non-PDF files (`.md` / `.txt`): omit page numbers for full text: `` `source_range: overview.md` ``
+   
+   **⚠️ If source_range annotations are missing, context-extractor.py will fail and Phase 3 will fall back to passing full source files — losing token efficiency.**
    - This annotation is used by `scripts/context-extractor.py` for automation; must not be omitted
    - Single example: `source_range: Digital Transformation Roadmap.pdf:12-15`
    - Multi-range example: `source_range: Platform Strategy.pdf:34-41, 78-82, 156`
@@ -302,13 +312,14 @@ Auto-extract from the full version, keeping only:
 3. Report actual file-based statistics:
    - H2 categories, H3 topics, knowledge points
    - Estimated atomic notes count (= bullet count), MOC count (= H3 count)
-
-4. Run **proportion check**: for each H2 category, compute `knowledge_points ÷ source_pages`:
+4. **source_range presence check**: count lines containing `source_range:` in the full roadmap. If zero source_range annotations are found, the context-extractor will fail and Phase 3 will lose token efficiency. This is a ❌ fatal error — go back to Step 2 and regenerate the roadmap with source_range annotations.
+5. Run **proportion check**: for each H2 category, compute `knowledge_points ÷ source_pages`:
    - \> 1.0 → ⚠️ over-fragmented, suggest merging adjacent knowledge points
    - 0.1–1.0 → ✅ reasonable
    - \< 0.1 → ⚠️ sparse content, consider merging or expanding
 
 5. Run **hierarchy check**: each H2 must have ≥ 2 H3 topics:
+   - 0 → ❌ fatal, H2 must have H3 topics
    - 0 → ❌ fatal, H2 must have H3 topics
    - 1 → ❌ redundant hierarchy, suggest a) split b) merge into adjacent H2 c) elevate H3 to H2
    - ≥ 2 → ✅ reasonable
